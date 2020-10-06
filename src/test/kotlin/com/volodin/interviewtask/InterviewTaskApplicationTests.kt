@@ -1,6 +1,7 @@
 package com.volodin.interviewtask
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -11,7 +12,6 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
-import kotlin.concurrent.thread
 
 @AutoConfigureWebTestClient
 @ExtendWith(SpringExtension::class)
@@ -34,21 +34,6 @@ class InterviewTaskApplicationTests {
 
 	@Test
 	fun test() {
-		val t1 = thread {
-			testCheckUrlsEndpoint()
-		}
-		val t2 = thread {
-			testCheckUrlsEndpoint()
-		}
-		val t3 = thread {
-			testCheckUrlsEndpoint()
-		}
-		t1.join()
-		t2.join()
-		t3.join()
-	}
-
-	private fun testCheckUrlsEndpoint() {
 		webTestClient.method(HttpMethod.POST)
 				.uri("/api/checkUrls")
 				.accept(MediaType.APPLICATION_JSON)
@@ -59,6 +44,9 @@ class InterviewTaskApplicationTests {
 				.hasSize(TEST_URLS_EXPECTED_RESULTS.size)
 				.returnResult()
 				.responseBody!!.forEach {
+					assertTrue(it.first is String)
+					assertTrue(it.second is Boolean)
+					// test may fail if some connection problems occur or server is unavailable
 					assertEquals(TEST_URLS_EXPECTED_RESULTS[it.first], it.second)
 				}
 	}

@@ -4,14 +4,18 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.ParallelFlux
+import reactor.core.scheduler.Schedulers
 
 @Service
-class UrlsAvailabilityCheckService: IUrlsCheckService {
-    override fun check(urls: Flux<String>): Flux<Pair<String, Boolean>> {
-        return urls.flatMap { url -> checkUrlAvailability(url).flatMap { Mono.just(Pair(url, it)) } }
+class UrlsAvailabilityParallelCheckService: IUrlsParallelCheckService {
+    override fun check(urls: Flux<String>): ParallelFlux<Pair<String, Boolean>> {
+        return urls.parallel(3)
+                .runOn(Schedulers.parallel())
+                .flatMap { url -> checkUrlAvailability(url) }
     }
 
-    private fun checkUrlAvailability(url: String): Mono<Boolean> {
+    private fun checkUrlAvailability(url: String): Mono<Pair<String, Boolean>> {
         return WebClient.create(url)
                 .get()
                 .exchange()
@@ -20,5 +24,6 @@ class UrlsAvailabilityCheckService: IUrlsCheckService {
                     it.bodyToMono(Void::class.java)
                     return@flatMap isAvailable
                 }.onErrorReturn(false)
+                .flatMap { Mono.just(Pair(url, it)) }
     }
 }
